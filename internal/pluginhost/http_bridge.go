@@ -215,15 +215,6 @@ func (h *Host) currentRuntimeConfig() *config.Config {
 }
 
 func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *config.Config, req pluginapi.HTTPRequest, httpReq *http.Request) (*http.Client, func(), error) {
-	profile := req.WireProfile
-	if profile == nil || (!profile.HTTP1Only && !profile.DisableAutoCompression && len(profile.HeaderProfile) == 0) {
-		client := helps.NewProxyAwareHTTPClient(c.proxyContext(ctx), cfg, c.auth, 0)
-		if client == nil {
-			client = &http.Client{}
-		}
-		return client, nil, nil
-	}
-
 	// Priority: request override, then auth proxy, then config proxy.
 	proxyStr := strings.TrimSpace(c.requestProxyURL)
 	if proxyStr == "" && c.auth != nil {
@@ -231,6 +222,24 @@ func (c *hostHTTPClient) newHTTPClientForRequest(ctx context.Context, cfg *confi
 	}
 	if proxyStr == "" && cfg != nil {
 		proxyStr = strings.TrimSpace(cfg.ProxyURL)
+	}
+
+	profile := req.WireProfile
+	if profile == nil || (!profile.HTTP1Only && !profile.DisableAutoCompression && len(profile.HeaderProfile) == 0) {
+		if proxyStr != "" && c.host != nil && c.host.httpTransports != nil {
+			transport, err := c.host.httpTransports.Get(proxyStr, func() (*http.Transport, error) {
+				transport, _, err := proxyutil.BuildHTTPTransport(proxyStr)
+				return transport, err
+			})
+			if err == nil && transport != nil {
+				return &http.Client{Transport: transport}, nil, nil
+			}
+		}
+		client := helps.NewProxyAwareHTTPClient(c.proxyContext(ctx), cfg, c.auth, 0)
+		if client == nil {
+			client = &http.Client{}
+		}
+		return client, nil, nil
 	}
 
 	var baseTransport *http.Transport
