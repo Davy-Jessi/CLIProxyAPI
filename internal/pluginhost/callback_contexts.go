@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
-	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginapi"
 )
 
 type callbackContextRegistry struct {
@@ -212,16 +210,4 @@ func (h *Host) callbackContextPluginID(id string) string {
 		return ""
 	}
 	return h.callbackContexts.pluginID(id)
-}
-
-// Keep the in-process HTTP policy on the validated callback scope, not on the wire.
-type callbackHTTPClientKey struct{}
-
-func (h *Host) callbackHTTPClient(ctx context.Context) pluginapi.HostHTTPClient {
-	if ctx != nil {
-		if client, ok := ctx.Value(callbackHTTPClientKey{}).(pluginapi.HostHTTPClient); ok && client != nil {
-			return client
-		}
-	}
-	return h.newHTTPClient(nil)
 }

@@ -14,7 +14,7 @@ func (a *rpcPluginAdapter) ExecuteStream(ctx context.Context, req pluginapi.Exec
 		return pluginapi.ExecutorStreamResponse{}, fmt.Errorf("plugin stream bridge is unavailable")
 	}
 	streamID, chunks, cleanupStream := a.host.streams.open(ctx)
-	callbackID, closeCallback := a.openHostCallbackContext(ctx, req.HTTPClient)
+	callbackID, closeCallback := a.openHostCallbackContext(ctx)
 	cleanup := combinedCleanup(cleanupStream, closeCallback)
 	rpcReq := rpcExecutorRequest{
 		ExecutorRequest: req,
